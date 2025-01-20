@@ -1,7 +1,7 @@
-from price_fetcher import PriceFetcher
-from transaction_processor import TransactionProcessor
 from transaction_fetcher import TransactionFetcher
-from data_exporter import DataExporter 
+from transaction_processor import TransactionProcessor
+from price_fetcher import PriceFetcher
+from data_exporter import DataExporter
 from datetime import datetime
 
 class WalletAnalyzer:
@@ -12,18 +12,6 @@ class WalletAnalyzer:
         self.exporter = DataExporter()
 
     def analyze_wallets_and_export(self, wallet_addresses, timeframe, minimum_wallet_capital, minimum_avg_holding_period, minimum_win_rate, minimum_total_pnl, export_filename='analysis_results.csv'):
-        """
-        Analyzes multiple wallets and exports the results to a CSV file.
-
-        Parameters:
-            wallet_addresses (list): A list of wallet addresses to analyze.
-            timeframe (str): The timeframe for analysis.
-            minimum_wallet_capital (float): The minimum capital required.
-            minimum_avg_holding_period (float): The minimum average holding period required.
-            minimum_win_rate (float): The minimum win rate required.
-            minimum_total_pnl (float): The minimum total PNL required.
-            export_filename (str): The name of the CSV file to export results.
-        """
         results = []
         
         for address in wallet_addresses:
@@ -77,12 +65,12 @@ class WalletAnalyzer:
             if not self.is_within_timeframe(timestamp, timeframe):
                 continue
 
-            is_buy = "buy_condition" in details  # Replace with actual logic to detect buy
-            is_sell = "sell_condition" in details  # Replace with actual logic to detect sell
+            is_buy = self.processor.is_buy_transaction(details)  # Check if it's a buy
+            is_sell = self.processor.is_sell_transaction(details)  # Check if it's a sell
 
             # Handle buy transactions
             if is_buy:
-                amount = details.get("amount", 0)  # Replace with actual transaction amount
+                amount = details.get("amount", 0)
                 price = self.price_fetcher.get_sol_to_usd_price()  # Fetch current price of SOL
                 unrealized_pnl -= amount * price
                 bought_assets[details["token_id"]] = {"price": price, "amount": amount, "timestamp": timestamp}
@@ -90,7 +78,7 @@ class WalletAnalyzer:
 
             # Handle sell transactions
             elif is_sell:
-                amount = details.get("amount", 0)  # Replace with actual transaction amount
+                amount = details.get("amount", 0)
                 price = self.price_fetcher.get_sol_to_usd_price()  # Fetch current price of SOL
                 realized_pnl += amount * price
                 profitable_trades += 1 if amount * price > 0 else 0
@@ -117,7 +105,13 @@ class WalletAnalyzer:
             "realized_pnl": realized_pnl,
             "unrealized_pnl": unrealized_pnl,
             "win_rate": win_rate,
-            "settings": {}  # Add settings used for analysis here if applicable
+            "settings": {
+                "timeframe": timeframe,
+                "minimum_wallet_capital": minimum_wallet_capital,
+                "minimum_avg_holding_period": minimum_avg_holding_period,
+                "minimum_win_rate": minimum_win_rate,
+                "minimum_total_pnl": minimum_total_pnl
+            }  # Store the settings used for analysis
         }
 
     def check_wallet_capital(self, address, minimum_capital_usd):
@@ -157,3 +151,29 @@ class WalletAnalyzer:
             holding_periods.append(holding_period)
 
         return sum(holding_periods) / len(holding_periods) if holding_periods else 0
+
+    def is_buy_transaction(self, details):
+        """
+        Determines whether the transaction is a buy based on details.
+        Example: A buy is identified when the wallet receives tokens.
+
+        Parameters:
+            details (dict): The transaction details.
+
+        Returns:
+            bool: True if the transaction is a buy, False otherwise.
+        """
+        return details.get("amount", 0) > 0 and details.get("transaction_type") == "receive"
+
+    def is_sell_transaction(self, details):
+        """
+        Determines whether the transaction is a sell based on details.
+        Example: A sell is identified when the wallet sends tokens.
+
+        Parameters:
+            details (dict): The transaction details.
+
+        Returns:
+            bool: True if the transaction is a sell, False otherwise.
+        """
+        return details.get("amount", 0) < 0 and details.get("transaction_type") == "send"
