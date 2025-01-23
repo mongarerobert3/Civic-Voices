@@ -6,7 +6,7 @@ const swaggerJsDoc = require('swagger-jsdoc');
 
 const authRoutes = require('./routes/auth');
 const taskRoutes = require('./routes/tasks');
-const { errorHandler } = require('./middleware/errorHandler'); // Custom error handler
+const { errorHandler } = require('./middleware/errorHandler'); 
 
 // Load environment variables from .env file
 dotenv.config();
