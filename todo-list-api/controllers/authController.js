@@ -1,4 +1,4 @@
-const User = require('../models/User'); // Ensure you import your User model
+const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
 // Register a new user
